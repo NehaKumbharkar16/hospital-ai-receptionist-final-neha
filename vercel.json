@@ -14,6 +14,5 @@
         { "key": "X-Content-Type-Options", "value": "nosniff" }
       ]
     }
-  ],
-  "ignoreCommand": "echo 'Deploying frontend only'"
+  ]
 }
