@@ -207,3 +207,24 @@ Your Hospital AI Agent is now live and accessible worldwide! 🌟
 - API: `https://your-backend.onrender.com/api/chat`
 
 The system will handle patient intake, AI classification, and data storage automatically! 🏥🤖
+
+---
+
+## CI: Smoke test (GitHub Actions) ✅
+
+We include a smoke test workflow that runs on pushes to `main` and can be triggered manually. It verifies the frontend and backend are reachable after deploys.
+
+To configure and run the smoke test:
+
+1. Go to **Settings → Secrets → Actions** in your GitHub repository and add these secrets:
+   - `BACKEND_URL` - e.g. `https://hospital-ai-receptionist-final.onrender.com`
+   - `FRONTEND_URL` - e.g. `https://hospital-ai-receptionist-final-neha-9qgygfs0d.vercel.app`
+
+2. Manually trigger the workflow:
+   - Go to the **Actions** tab → **Smoke tests** → **Run workflow** → choose branch `main` → **Run workflow**.
+
+3. Check the workflow logs for the smoke test output (`tests/smoke_test.py` performs the checks).
+
+This ensures deployments are validated automatically and alerts you quickly if the live sites become unreachable.
+
+---
