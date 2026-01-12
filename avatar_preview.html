@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital AI Agent - Avatar Preview</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .avatar-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .avatar-item {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .avatar-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid #007bff;
+            margin-bottom: 10px;
+        }
+        .ai-avatar {
+            border-color: #28a745;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .description {
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Hospital AI Agent - Avatar Preview</h1>
+    <p class="description">These are the gender-neutral avatar options used in the chat interface. Each user gets a randomly assigned avatar for their session.</p>
+
+    <h2>User Avatars (Gender-Neutral, Random Selection)</h2>
+    <div class="avatar-grid">
+        <div class="avatar-item">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=person-1" alt="Person 1" class="avatar-image">
+            <div>Person 1</div>
+        </div>
+        <div class="avatar-item">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=person-2" alt="Person 2" class="avatar-image">
+            <div>Person 2</div>
+        </div>
+        <div class="avatar-item">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=person-3" alt="Person 3" class="avatar-image">
+            <div>Person 3</div>
+        </div>
+        <div class="avatar-item">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=person-4" alt="Person 4" class="avatar-image">
+            <div>Person 4</div>
+        </div>
+        <div class="avatar-item">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=person-5" alt="Person 5" class="avatar-image">
+            <div>Person 5</div>
+        </div>
+    </div>
+
+    <h2>AI Assistant Avatar</h2>
+    <div class="avatar-grid">
+        <div class="avatar-item">
+            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=ai-assistant" alt="AI Assistant" class="avatar-image ai-avatar">
+            <div>AI Assistant</div>
+            <div class="description">Bot avatar for the hospital receptionist</div>
+        </div>
+    </div>
+
+    <div style="margin-top: 30px; padding: 20px; background: #e8f4fd; border-radius: 10px;">
+        <h3>Live Application</h3>
+        <p>Open <a href="http://localhost:5173" target="_blank">http://localhost:5173</a> to see the avatars in action!</p>
+        <p>Each new chat session gets a randomly assigned user avatar from the options above.</p>
+    </div>
+</body>
+</html>
