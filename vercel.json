@@ -3,7 +3,6 @@
   "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/dist",
   "framework": null,
-  "functions": {},
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],
