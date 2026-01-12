@@ -207,3 +207,24 @@ The application will be available at:
 4. Deploy frontend to static hosting (Vercel, Netlify, etc.)
 5. Set up monitoring and logging
 6. Configure backup strategies for database
+
+## CI: Smoke test (GitHub Actions) ✅
+
+This repository includes a smoke test workflow that runs on pushes to `main` and can be triggered manually. The workflow runs a simple Python script that checks:
+
+- The frontend root returns HTTP 200
+- The backend `/api/chat` endpoint returns HTTP 200 and includes a `response` field
+
+To configure and run the workflow:
+
+1. Go to your repository Settings → Secrets → Actions and add the following secrets:
+   - `BACKEND_URL`: e.g. `https://hospital-ai-receptionist-final.onrender.com`
+   - `FRONTEND_URL`: e.g. `https://hospital-ai-receptionist-final-neha-9qgygfs0d.vercel.app`
+
+2. Manually trigger the workflow:
+   - Go to the **Actions** tab → select **Smoke tests** → **Run workflow** → choose branch `main` → **Run workflow**.
+
+3. Check the workflow run logs to see the smoke test output. The script is `tests/smoke_test.py` and will fail the job if either endpoint is unreachable or returns an unexpected response.
+
+This helps ensure the deployed frontend and backend remain reachable after deploys.
+
