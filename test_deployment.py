@@ -28,7 +28,8 @@ def test_deployment():
 
         if chat_response.status_code == 200:
             result = chat_response.json()
-            print("✅ Chat API: Working"            print(f"   Response: {result['response'][:50]}...")
+            print("✅ Chat API: Working")
+            print(f"   Response: {result['response'][:50]}...")
         else:
             print(f"❌ Chat API: HTTP {chat_response.status_code}")
 
