@@ -53,8 +53,14 @@ const Chat = () => {
     setIsLoading(true)
 
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-      const response = await fetch(`${API_URL}/chat`, {
+      // Normalize API base and ensure we call the /api/chat endpoint exactly once
+      const rawApiEnv = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+      const apiBase = rawApiEnv.replace(/\/$/, '') // drop trailing slash
+      const apiRoot = apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`
+      const apiEndpoint = `${apiRoot}/chat`
+      console.debug('Using API endpoint:', apiEndpoint)
+
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -66,14 +72,29 @@ const Chat = () => {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to send message')
+        // Try to read response body for debugging (limit length)
+        let errText = ''
+        try {
+          errText = await response.text()
+          if (errText.length > 500) errText = errText.slice(0, 500) + '...'
+        } catch (e) {
+          errText = ''
+        }
+        console.error('Chat API non-OK response', { status: response.status, body: errText })
+        throw new Error(`Failed to send message (status ${response.status})${errText ? `: ${errText}` : ''}`)
       }
 
-      const data = await response.json()
+      const text = await response.text()
+      let data: any = { response: text }
+      try {
+        data = JSON.parse(text)
+      } catch (e) {
+        // response was not JSON, keep raw text for debugging
+      }
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: data.response,
+        text: data.response || String(data),
         sender: 'ai',
         timestamp: new Date()
       }
