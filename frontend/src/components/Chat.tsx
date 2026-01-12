@@ -53,8 +53,14 @@ const Chat = () => {
     setIsLoading(true)
 
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-      const response = await fetch(`${API_URL}/chat`, {
+      // Normalize API base and ensure we call the /api/chat endpoint exactly once
+      const rawApiEnv = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+      const apiBase = rawApiEnv.replace(/\/$/, '') // drop trailing slash
+      const apiRoot = apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`
+      const apiEndpoint = `${apiRoot}/chat`
+      console.debug('Using API endpoint:', apiEndpoint)
+
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
