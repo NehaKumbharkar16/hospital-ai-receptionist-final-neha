@@ -1,14 +1,18 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import chat
+from routers import chat, patients, appointments, doctors, admin
 from database import init_db
 
-app = FastAPI(title="Hospital AI Receptionist", version="1.0.0")
+app = FastAPI(
+    title="Hospital Management System with AI Receptionist",
+    version="2.0.0",
+    description="Complete hospital management platform with AI-powered patient intake"
+)
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "https://hospital-ai-agent.onrender.com", "*"],  # Allow local dev, production, and all for testing
+    allow_origins=["http://localhost:5173", "https://hospital-ai-agent.onrender.com", "*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -20,6 +24,17 @@ async def startup_event():
 
 @app.get("/")
 async def root():
-    return {"message": "Hospital AI Receptionist API"}
+    return {
+        "message": "Hospital Management System API",
+        "version": "2.0.0",
+        "documentation": "/docs"
+    }
 
+# Include routers
 app.include_router(chat.router, prefix="/api")
+app.include_router(patients.router, prefix="/api")
+app.include_router(appointments.appointments_router, prefix="/api")
+app.include_router(appointments.departments_router, prefix="/api")
+app.include_router(doctors.router, prefix="/api")
+app.include_router(admin.router, prefix="/api")
+app.include_router(admin.feedback_router, prefix="/api")

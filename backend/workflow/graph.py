@@ -51,11 +51,17 @@ def classify_symptom_with_keywords(symptom: str) -> str:
         return "General"
 
 def classify_symptom_with_llm(symptom: str) -> str:
-    """Use LLM to classify symptoms into General, Emergency, or Mental_health"""
+    """Use LLM to classify symptoms into General, Emergency, or Mental_health (with timeout)"""
 
     # If LLM is not available, fall back to keyword-based classification
     if llm is None:
         return classify_symptom_with_keywords(symptom)
+
+    # Try quick keyword-based check first (faster fallback)
+    quick_result = classify_symptom_with_keywords(symptom)
+    if quick_result in ["Emergency", "Mental_health"]:
+        # If keyword-based check finds emergency/mental health, trust it (faster)
+        return quick_result
 
     prompt = (
         "You are a helpful Medical Assistant. Classify the symptoms below into one of the categories:\n\n"
@@ -63,11 +69,11 @@ def classify_symptom_with_llm(symptom: str) -> str:
         "- Emergency\n"
         "- Mental_health\n\n"
         f"Symptom: {symptom}\n\n"
-        "Respond only with one word: General, Emergency, or Mental_health\n\n"
-        "Example: Input: I have fever, Output: General"
+        "Respond only with one word: General, Emergency, or Mental_health"
     )
 
     try:
+        # Call LLM with minimal overhead
         response = llm.invoke([HumanMessage(content=prompt)])
         category = response.content.strip()
 
@@ -83,8 +89,8 @@ def classify_symptom_with_llm(symptom: str) -> str:
             return "General"  # Default fallback
 
     except Exception as e:
-        print(f"LLM classification failed: {e}")
-        return classify_symptom_with_keywords(symptom)  # Fallback to keyword-based
+        # If LLM fails, fall back to keyword-based (much faster)
+        return classify_symptom_with_keywords(symptom)
 
 class ConversationState(TypedDict):
     messages: list
@@ -93,7 +99,7 @@ class ConversationState(TypedDict):
     session_id: str
 
 def router_node(state: ConversationState) -> ConversationState:
-    """Route to initial ward for information collection"""
+    """Route to initial ward for information collection and generate first response"""
     messages = state["messages"]
     last_message = messages[-1]
 
@@ -107,9 +113,13 @@ def router_node(state: ConversationState) -> ConversationState:
         patient_data = state["patient_data"].copy()
         patient_data["ward"] = ward
 
+        # Generate initial greeting response
+        initial_response = AIMessage(content="Hello! I'm the hospital AI receptionist. May I please have your full name?")
+
         return {
             **state,
             "patient_data": patient_data,
+            "messages": messages + [initial_response],
             "current_node": next_node
         }
 

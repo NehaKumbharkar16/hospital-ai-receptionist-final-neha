@@ -1,0 +1,150 @@
+from fastapi import APIRouter, HTTPException, Query
+from typing import List, Optional
+from database import get_supabase_admin
+from models.hospital import (
+    PatientCreate, PatientUpdate, Patient, PatientLookup,
+    SuccessResponse, ErrorResponse
+)
+import uuid
+
+router = APIRouter(prefix="/patients", tags=["Patients"])
+
+@router.post("/register", response_model=Patient)
+async def register_patient(patient: PatientCreate):
+    """Register a new patient"""
+    try:
+        supabase = get_supabase_admin()
+        if not supabase:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        
+        # Check if patient already exists
+        existing = supabase.table("patients").select("*").eq("email", patient.email).execute()
+        if existing.data and len(existing.data) > 0:
+            raise HTTPException(status_code=400, detail="Patient with this email already exists")
+        
+        data = {
+            "first_name": patient.first_name,
+            "last_name": patient.last_name,
+            "email": patient.email,
+            "phone": patient.phone,
+            "age": patient.age,
+            "gender": patient.gender.value if patient.gender else None,
+            "blood_group": patient.blood_group,
+            "address": patient.address,
+            "emergency_contact_name": patient.emergency_contact_name,
+            "emergency_contact_phone": patient.emergency_contact_phone,
+            "medical_history": patient.medical_history,
+            "allergies": patient.allergies,
+            "has_emergency_flag": patient.has_emergency_flag or False,
+            "emergency_description": patient.emergency_description,
+            "preferred_department_id": patient.preferred_department_id,
+            "registration_date": "now()"
+        }
+        
+        result = supabase.table("patients").insert(data).execute()
+        if result.data and len(result.data) > 0:
+            return result.data[0]
+        else:
+            raise HTTPException(status_code=500, detail="Failed to register patient")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERROR in register_patient: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/lookup", response_model=List[Patient])
+async def lookup_patient(lookup: PatientLookup):
+    """Look up existing patient by email, phone, or patient ID"""
+    try:
+        supabase = get_supabase_admin()
+        if not supabase:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        
+        query = supabase.table("patients").select("*")
+        
+        if lookup.email:
+            query = query.eq("email", lookup.email)
+        elif lookup.phone:
+            query = query.eq("phone", lookup.phone)
+        elif lookup.patient_id:
+            query = query.eq("patient_id", lookup.patient_id)
+        else:
+            raise HTTPException(status_code=400, detail="Provide email, phone, or patient_id for lookup")
+        
+        result = query.execute()
+        return result.data if result.data else []
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERROR in lookup_patient: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{patient_id}", response_model=Patient)
+async def get_patient(patient_id: str):
+    """Get patient details by ID"""
+    try:
+        supabase = get_supabase_admin()
+        if not supabase:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        
+        result = supabase.table("patients").select("*").eq("id", patient_id).execute()
+        if result.data and len(result.data) > 0:
+            return result.data[0]
+        else:
+            raise HTTPException(status_code=404, detail="Patient not found")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/{patient_id}", response_model=Patient)
+async def update_patient(patient_id: str, patient: PatientUpdate):
+    """Update patient details"""
+    try:
+        supabase = get_supabase_admin()
+        if not supabase:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        
+        # Check if patient exists
+        existing = supabase.table("patients").select("*").eq("id", patient_id).execute()
+        if not existing.data or len(existing.data) == 0:
+            raise HTTPException(status_code=404, detail="Patient not found")
+        
+        # Prepare update data (only non-None values)
+        data = {}
+        for field, value in patient.model_dump().items():
+            if value is not None:
+                if hasattr(value, 'value'):
+                    data[field] = value.value
+                else:
+                    data[field] = value
+        
+        data["updated_at"] = "now()"
+        
+        result = supabase.table("patients").update(data).eq("id", patient_id).execute()
+        if result.data and len(result.data) > 0:
+            return result.data[0]
+        else:
+            raise HTTPException(status_code=500, detail="Failed to update patient")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/", response_model=List[Patient])
+async def list_patients(skip: int = Query(0), limit: int = Query(10)):
+    """List all patients with pagination"""
+    try:
+        supabase = get_supabase_admin()
+        if not supabase:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        
+        result = supabase.table("patients").select("*").range(skip, skip + limit - 1).execute()
+        return result.data if result.data else []
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

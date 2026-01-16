@@ -25,8 +25,11 @@ const Chat = () => {
   ])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [responseTime, setResponseTime] = useState<number | null>(null)
   const [sessionId] = useState(() => Math.random().toString(36).substring(7))
+  const [lastMessageTime, setLastMessageTime] = useState<number>(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -41,6 +44,11 @@ const Chat = () => {
     e.preventDefault()
     if (!inputMessage.trim() || isLoading) return
 
+    // Debounce: prevent sending messages too quickly (300ms minimum)
+    const now = Date.now()
+    if (now - lastMessageTime < 300) return
+    setLastMessageTime(now)
+
     const userMessage: Message = {
       id: Date.now().toString(),
       text: inputMessage,
@@ -51,6 +59,15 @@ const Chat = () => {
     setMessages(prev => [...prev, userMessage])
     setInputMessage('')
     setIsLoading(true)
+    setResponseTime(null)
+
+    // Cancel previous request if it's still pending
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+
+    const startTime = Date.now()
+    abortControllerRef.current = new AbortController()
 
     try {
       // Normalize API base and ensure we call the /api/chat endpoint exactly once
@@ -58,7 +75,6 @@ const Chat = () => {
       const apiBase = rawApiEnv.replace(/\/$/, '') // drop trailing slash
       const apiRoot = apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`
       const apiEndpoint = `${apiRoot}/chat`
-      console.debug('Using API endpoint:', apiEndpoint)
 
       const response = await fetch(apiEndpoint, {
         method: 'POST',
@@ -68,7 +84,8 @@ const Chat = () => {
         body: JSON.stringify({
           message: userMessage.text,
           session_id: sessionId
-        })
+        }),
+        signal: abortControllerRef.current.signal
       })
 
       if (!response.ok) {
@@ -80,7 +97,6 @@ const Chat = () => {
         } catch (e) {
           errText = ''
         }
-        console.error('Chat API non-OK response', { status: response.status, body: errText })
         throw new Error(`Failed to send message (status ${response.status})${errText ? `: ${errText}` : ''}`)
       }
 
@@ -92,6 +108,9 @@ const Chat = () => {
         // response was not JSON, keep raw text for debugging
       }
 
+      const elapsedTime = Date.now() - startTime
+      setResponseTime(elapsedTime)
+
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         text: data.response || String(data),
@@ -100,11 +119,13 @@ const Chat = () => {
       }
 
       setMessages(prev => [...prev, aiMessage])
-    } catch (error) {
-      console.error('Error sending message:', error)
+    } catch (error: any) {
+      // Don't show error for aborted requests
+      if (error.name === 'AbortError') return
+      
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: 'Sorry, I\'m having trouble connecting to the hospital system. Please try again.',
+        text: 'Sorry, I\'m having trouble connecting. Please try again.',
         sender: 'ai',
         timestamp: new Date()
       }
