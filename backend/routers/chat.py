@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from models.patient import ChatMessage, PatientData
 from workflow.graph import graph
-from database import get_supabase
+from database import get_supabase, get_supabase_admin
 from typing import Dict, Any
 import uuid
 
@@ -71,41 +71,64 @@ async def chat_endpoint(chat_message: ChatMessage) -> Dict[str, str]:
 def store_patient_data(session_id: str, patient_data: Dict[str, Any]):
     """Store completed patient data in Supabase"""
     try:
+        # Use admin client for inserts to bypass RLS
+        supabase_admin = get_supabase_admin()
         supabase = get_supabase()
-        print(f"DEBUG: Supabase client: {supabase is not None}")
+        
+        print(f"DEBUG: Supabase admin client: {supabase_admin is not None}")
+        print(f"DEBUG: Supabase anon client: {supabase is not None}")
 
-        if supabase:
-            data = {
-                "session_id": session_id,
-                "patient_name": patient_data["patient_name"],
-                "patient_age": patient_data["patient_age"],
-                "patient_query": patient_data["patient_query"],
-                "ward": patient_data["ward"],
-                "created_at": "now()"
-            }
+        if supabase_admin is None:
+            print("ERROR: Supabase admin client is None - make sure SUPABASE_SERVICE_ROLE_KEY is set in environment")
+            return
 
-            print(f"DEBUG: Attempting to insert data: {data}")
+        # Convert ward enum to string if it's an enum
+        ward_value = patient_data.get("ward")
+        if ward_value is None:
+            print("ERROR: Ward is None!")
+            return
+            
+        if hasattr(ward_value, 'value'):
+            # It's an Enum, get its value
+            ward_value = ward_value.value
+            print(f"DEBUG: Converted enum ward to string: {ward_value}")
+        else:
+            # It's already a string
+            ward_value = str(ward_value)
+            print(f"DEBUG: Ward is already string: {ward_value}")
+        
+        data = {
+            "session_id": session_id,
+            "patient_name": patient_data.get("patient_name"),
+            "patient_age": patient_data.get("patient_age"),
+            "patient_query": patient_data.get("patient_query"),
+            "ward": ward_value,
+            "created_at": "now()"
+        }
 
-            # First check if table exists
-            try:
-                # Try to select from the table to see if it exists
-                test_result = supabase.table("patients").select("*").limit(1).execute()
-                print(f"DEBUG: Table exists, current records: {len(test_result.data) if test_result.data else 0}")
-            except Exception as table_error:
-                print(f"DEBUG: Table check failed: {table_error}")
+        print(f"DEBUG: Final data to insert: {data}")
 
-            # Now try to insert
-            result = supabase.table("patients").insert(data).execute()
-            print(f"SUCCESS: Patient data stored: {result}")
-            print(f"SUCCESS: Inserted data: {result.data if hasattr(result, 'data') else 'No data attribute'}")
+        # First check if table exists
+        try:
+            test_result = supabase_admin.table("patients").select("*").limit(1).execute()
+            print(f"DEBUG: Table exists, current records: {len(test_result.data) if test_result.data else 0}")
+        except Exception as table_error:
+            print(f"DEBUG: Table check failed: {table_error}")
 
-            # Verify the insertion by selecting the record
+        # Now try to insert using admin client (bypasses RLS)
+        print(f"DEBUG: Attempting insert with admin client")
+        result = supabase_admin.table("patients").insert(data).execute()
+        print(f"SUCCESS: Insert result type: {type(result)}")
+        print(f"SUCCESS: Insert result: {result}")
+        
+        if hasattr(result, 'data'):
+            print(f"SUCCESS: Inserted data: {result.data}")
             if result.data and len(result.data) > 0:
-                inserted_id = result.data[0].get('session_id')
-                verify_result = supabase.table("patients").select("*").eq("session_id", session_id).execute()
+                print(f"SUCCESS: Record inserted successfully: {result.data[0]}")
+                verify_result = supabase_admin.table("patients").select("*").eq("session_id", session_id).execute()
                 print(f"SUCCESS: Verification - found {len(verify_result.data)} records for session {session_id}")
         else:
-            print("ERROR: Supabase client is None")
+            print(f"SUCCESS: No data attribute in result, but insert likely succeeded")
 
     except Exception as e:
         print(f"ERROR: Failed to store patient data: {e}")
