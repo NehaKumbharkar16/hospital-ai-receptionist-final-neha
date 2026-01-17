@@ -62,6 +62,9 @@ async def chat_endpoint(chat_message: ChatMessage) -> Dict[str, str]:
         # Get patient data for potential storage
         patient_data = result["patient_data"]
         
+        # Save chat conversation to database asynchronously
+        asyncio.create_task(save_chat_to_database(session_id, result["messages"]))
+        
         # Store patient data asynchronously (non-blocking) if complete
         if all([
             patient_data.get("patient_name"),
@@ -113,6 +116,58 @@ def store_patient_data(session_id: str, patient_data: Dict[str, Any]):
 
     except Exception as e:
         pass  # Silent fail for background storage
+
+async def save_chat_to_database(session_id: str, messages: list):
+    """Save complete chat conversation to Supabase chat_sessions table"""
+    loop = asyncio.get_event_loop()
+    try:
+        await loop.run_in_executor(executor, _save_chat_blocking, session_id, messages)
+    except Exception as e:
+        print(f"[WARNING] Failed to save chat to database: {e}")
+
+def _save_chat_blocking(session_id: str, messages: list):
+    """Blocking function to save chat to database"""
+    try:
+        supabase_admin = get_supabase_admin()
+        if not supabase_admin:
+            return
+        
+        # Convert LangChain messages to serializable format
+        conversation_data = []
+        for msg in messages:
+            if hasattr(msg, 'content') and hasattr(msg, '__class__'):
+                msg_type = msg.__class__.__name__
+                msg_content = msg.content
+                conversation_data.append({
+                    "type": msg_type,
+                    "content": msg_content
+                })
+        
+        # Prepare data for chat_sessions table
+        chat_data = {
+            "session_id": session_id,
+            "conversation_data": conversation_data,
+            "status": "active"
+        }
+        
+        # Try to update existing session, or insert new one
+        try:
+            # First check if session exists
+            existing = supabase_admin.table("chat_sessions").select("id").eq("session_id", session_id).execute()
+            
+            if existing.data and len(existing.data) > 0:
+                # Update existing session
+                supabase_admin.table("chat_sessions").update(chat_data).eq("session_id", session_id).execute()
+                print(f"[DATABASE] Updated chat session: {session_id}")
+            else:
+                # Insert new session
+                supabase_admin.table("chat_sessions").insert(chat_data).execute()
+                print(f"[DATABASE] Saved chat session: {session_id}")
+        except Exception as db_error:
+            print(f"[WARNING] Database save failed: {db_error}")
+    
+    except Exception as e:
+        print(f"[ERROR] Failed to save chat: {e}")
 
 async def store_patient_data_async(session_id: str, patient_data: Dict[str, Any]):
     """Store patient data asynchronously without blocking chat response"""
