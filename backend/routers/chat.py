@@ -169,8 +169,8 @@ def _save_consultation_blocking(session_id: str, patient_name: str, patient_age:
         ward_value = suggested_ward
         if hasattr(ward_value, 'value'):
             ward_value = ward_value.value
-        else:
-            ward_value = str(ward_value)
+        
+        ward_value = str(ward_value).strip()
         
         # Ensure we have valid data to save
         if not session_id:
@@ -180,20 +180,23 @@ def _save_consultation_blocking(session_id: str, patient_name: str, patient_age:
         # Prepare consultation data - don't include None values that will cause NULLs
         consultation_data = {
             "session_id": session_id,
-            "status": "consultation_completed"
+            "status": "completed"  # Shorter status value
         }
         
         # Only add fields if they have values
-        if patient_name:
+        if patient_name and str(patient_name).strip() != "None":
             consultation_data["patient_name"] = str(patient_name).strip()
-        if patient_age:
-            consultation_data["patient_age"] = int(patient_age)
-        if symptoms:
+        if patient_age and str(patient_age).strip() != "None":
+            try:
+                consultation_data["patient_age"] = int(patient_age)
+            except:
+                pass
+        if symptoms and str(symptoms).strip() != "None":
             consultation_data["symptoms"] = str(symptoms).strip()
-        if ward_value:
-            consultation_data["suggested_ward"] = str(ward_value).strip()
+        if ward_value and ward_value != "None":
+            consultation_data["suggested_ward"] = ward_value
         
-        print(f"[DEBUG] Consultation data to save: {consultation_data}")
+        print(f"[DEBUG] Final consultation data to save: {consultation_data}")
         
         # Try to update existing consultation, or insert new one
         try:
@@ -205,13 +208,13 @@ def _save_consultation_blocking(session_id: str, patient_name: str, patient_age:
                 result = supabase_admin.table("chat_sessions").update(consultation_data).eq("session_id", session_id).execute()
                 print(f"[SUCCESS] Updated consultation for session {session_id}")
                 if result.data:
-                    print(f"[SUCCESS] Updated data: {result.data[0]}")
+                    print(f"[SUCCESS] Updated with: patient_name={result.data[0].get('patient_name')}, age={result.data[0].get('patient_age')}, ward={result.data[0].get('suggested_ward')}")
             else:
                 # Insert new consultation
                 result = supabase_admin.table("chat_sessions").insert(consultation_data).execute()
                 print(f"[SUCCESS] Saved new consultation for session {session_id}")
                 if result.data:
-                    print(f"[SUCCESS] Inserted data: {result.data[0]}")
+                    print(f"[SUCCESS] Inserted with: patient_name={result.data[0].get('patient_name')}, age={result.data[0].get('patient_age')}, ward={result.data[0].get('suggested_ward')}")
         except Exception as db_error:
             print(f"[ERROR] Database operation failed: {db_error}")
             import traceback
