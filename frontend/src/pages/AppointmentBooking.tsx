@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { getApiUrl } from '../utils/api'
 
 interface AppointmentBookingProps {
   onNavigate?: (page: string) => void
@@ -26,7 +27,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = () => {
 
   const loadDoctors = async () => {
     try {
-      const response = await fetch('/api/doctors')
+      const response = await fetch(getApiUrl('/api/doctors'))
       if (response.ok) {
         const data = await response.json()
         setDoctors(data)
@@ -45,7 +46,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = () => {
     setLoading(true)
     try {
       // First find patient by email
-      const patientResponse = await fetch(`/api/patients/lookup?email=${lookupPatientEmail}`, {
+      const patientResponse = await fetch(getApiUrl(`/api/patients/lookup?email=${lookupPatientEmail}`), {
         method: 'POST'
       })
 
@@ -56,7 +57,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = () => {
           setFormData(prev => ({ ...prev, patientId }))
 
           // Get patient appointments
-          const appointmentsResponse = await fetch(`/api/appointments/patient/${patientId}`)
+          const appointmentsResponse = await fetch(getApiUrl(`/api/appointments/patient/${patientId}`))
           if (appointmentsResponse.ok) {
             const appts = await appointmentsResponse.json()
             setAppointments(appts)
@@ -89,7 +90,7 @@ const AppointmentBooking: React.FC<AppointmentBookingProps> = () => {
 
     setLoading(true)
     try {
-      const response = await fetch('/api/appointments/', {
+      const response = await fetch(getApiUrl('/api/appointments/'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { getApiUrl } from '../utils/api'
 
 interface PatientRegistrationProps {
   onNavigate?: (page: string) => void
@@ -44,7 +45,7 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onNavigate })
     setSuccessMessage('')
 
     try {
-      const response = await fetch('/api/patients/register', {
+      const response = await fetch(getApiUrl('/api/patients/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -107,7 +108,7 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onNavigate })
       }
 
       const params = new URLSearchParams(lookupQuery)
-      const response = await fetch(`/api/patients/lookup?${params}`, {
+      const response = await fetch(getApiUrl(`/api/patients/lookup?${params}`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })

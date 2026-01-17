@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import './Chat.css'
+import { getApiUrl } from '../utils/api'
 
 interface Message {
   id: string
@@ -68,10 +69,7 @@ const Chat = () => {
 
     try {
       // Normalize API base and ensure we call the /api/chat endpoint exactly once
-      const rawApiEnv = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-      const apiBase = rawApiEnv.replace(/\/$/, '') // drop trailing slash
-      const apiRoot = apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`
-      const apiEndpoint = `${apiRoot}/chat`
+      const apiEndpoint = getApiUrl('/chat')
 
       const response = await fetch(apiEndpoint, {
         method: 'POST',

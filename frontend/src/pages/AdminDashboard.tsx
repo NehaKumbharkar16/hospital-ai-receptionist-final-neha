@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { getApiUrl } from '../utils/api'
 
 interface AdminDashboardProps {
   onNavigate?: (page: string) => void
@@ -19,14 +20,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
     setLoading(true)
     try {
       // Load dashboard overview
-      const overviewResponse = await fetch('/api/admin/dashboard/overview')
+      const overviewResponse = await fetch(getApiUrl('/api/admin/dashboard/overview'))
       if (overviewResponse.ok) {
         const overviewData = await overviewResponse.json()
         setStats(overviewData)
       }
 
       // Load emergency cases
-      const emergencyResponse = await fetch('/api/admin/emergency-cases?days=7')
+      const emergencyResponse = await fetch(getApiUrl('/api/admin/emergency-cases?days=7'))
       if (emergencyResponse.ok) {
         const emergencyData = await emergencyResponse.json()
         setEmergencyCases(emergencyData.cases || [])
