@@ -62,15 +62,29 @@ async def chat_endpoint(chat_message: ChatMessage) -> Dict[str, str]:
         # Get patient data for potential storage
         patient_data = result["patient_data"]
         
+        # Debug logging
+        print(f"[DEBUG] Patient data from result: {patient_data}")
+        print(f"[DEBUG] Patient name: {patient_data.get('patient_name')}")
+        print(f"[DEBUG] Patient age: {patient_data.get('patient_age')}")
+        print(f"[DEBUG] Ward: {patient_data.get('ward')}")
+        
         # Save patient consultation data if ward has been determined by AI
-        if patient_data.get("ward"):
+        ward_value = patient_data.get("ward")
+        patient_name = patient_data.get("patient_name")
+        patient_age = patient_data.get("patient_age")
+        symptoms = patient_data.get("patient_query")
+        
+        if ward_value:
+            print(f"[INFO] Saving consultation for {patient_name} (age: {patient_age}) - Ward: {ward_value}")
             asyncio.create_task(save_patient_consultation(
                 session_id=session_id,
-                patient_name=patient_data.get("patient_name"),
-                patient_age=patient_data.get("patient_age"),
-                symptoms=patient_data.get("patient_query"),
-                suggested_ward=patient_data.get("ward")
+                patient_name=patient_name,
+                patient_age=patient_age,
+                symptoms=symptoms,
+                suggested_ward=ward_value
             ))
+        else:
+            print(f"[DEBUG] Ward not yet determined, skipping consultation save")
         
         # Save chat conversation to database asynchronously
         asyncio.create_task(save_chat_to_database(session_id, result["messages"]))
@@ -148,6 +162,7 @@ def _save_consultation_blocking(session_id: str, patient_name: str, patient_age:
     try:
         supabase_admin = get_supabase_admin()
         if not supabase_admin:
+            print(f"[ERROR] Supabase admin client not available")
             return
         
         # Convert ward enum to string if needed
@@ -157,15 +172,28 @@ def _save_consultation_blocking(session_id: str, patient_name: str, patient_age:
         else:
             ward_value = str(ward_value)
         
-        # Prepare consultation data
+        # Ensure we have valid data to save
+        if not session_id:
+            print(f"[ERROR] No session_id provided for consultation save")
+            return
+        
+        # Prepare consultation data - don't include None values that will cause NULLs
         consultation_data = {
             "session_id": session_id,
-            "patient_name": patient_name,
-            "patient_age": patient_age,
-            "symptoms": symptoms,
-            "suggested_ward": ward_value,
             "status": "consultation_completed"
         }
+        
+        # Only add fields if they have values
+        if patient_name:
+            consultation_data["patient_name"] = str(patient_name).strip()
+        if patient_age:
+            consultation_data["patient_age"] = int(patient_age)
+        if symptoms:
+            consultation_data["symptoms"] = str(symptoms).strip()
+        if ward_value:
+            consultation_data["suggested_ward"] = str(ward_value).strip()
+        
+        print(f"[DEBUG] Consultation data to save: {consultation_data}")
         
         # Try to update existing consultation, or insert new one
         try:
@@ -174,17 +202,25 @@ def _save_consultation_blocking(session_id: str, patient_name: str, patient_age:
             
             if existing.data and len(existing.data) > 0:
                 # Update existing consultation
-                supabase_admin.table("chat_sessions").update(consultation_data).eq("session_id", session_id).execute()
-                print(f"[DATABASE] Updated consultation for {patient_name} (Age: {patient_age}) - Ward: {ward_value}")
+                result = supabase_admin.table("chat_sessions").update(consultation_data).eq("session_id", session_id).execute()
+                print(f"[SUCCESS] Updated consultation for session {session_id}")
+                if result.data:
+                    print(f"[SUCCESS] Updated data: {result.data[0]}")
             else:
                 # Insert new consultation
-                supabase_admin.table("chat_sessions").insert(consultation_data).execute()
-                print(f"[DATABASE] Saved consultation for {patient_name} (Age: {patient_age}) - Suggested Ward: {ward_value}")
+                result = supabase_admin.table("chat_sessions").insert(consultation_data).execute()
+                print(f"[SUCCESS] Saved new consultation for session {session_id}")
+                if result.data:
+                    print(f"[SUCCESS] Inserted data: {result.data[0]}")
         except Exception as db_error:
-            print(f"[WARNING] Consultation save failed: {db_error}")
+            print(f"[ERROR] Database operation failed: {db_error}")
+            import traceback
+            traceback.print_exc()
     
     except Exception as e:
         print(f"[ERROR] Failed to save consultation: {e}")
+        import traceback
+        traceback.print_exc()
 
 def _save_chat_blocking(session_id: str, messages: list):
     """Blocking function to save chat to database"""
