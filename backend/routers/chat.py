@@ -27,7 +27,8 @@ async def chat_endpoint(chat_message: ChatMessage) -> Dict[str, str]:
                 "messages": [],
                 "patient_data": PatientData().model_dump(),
                 "current_node": "router",
-                "session_id": session_id
+                "session_id": session_id,
+                "router_greeting_shown": False
             }
 
         state = conversation_states[session_id]

@@ -97,31 +97,36 @@ class ConversationState(TypedDict):
     patient_data: PatientData
     current_node: str
     session_id: str
+    router_greeting_shown: bool
 
 def router_node(state: ConversationState) -> ConversationState:
     """Route to initial ward for information collection and generate first response"""
     messages = state["messages"]
-    last_message = messages[-1]
+    
+    # Only show greeting if we haven't shown it yet
+    if not state.get("router_greeting_shown", False) and len(messages) > 0:
+        last_message = messages[-1]
+        
+        if isinstance(last_message, HumanMessage):
+            # For initial routing, always go to general ward first
+            # The ward logic will handle the actual classification later
+            ward = Ward.GENERAL
+            next_node = "general_ward"
 
-    if isinstance(last_message, HumanMessage):
-        # For initial routing, always go to general ward first
-        # The ward logic will handle the actual classification later
-        ward = Ward.GENERAL
-        next_node = "general_ward"
+            # Initialize patient data
+            patient_data = state["patient_data"].copy()
+            patient_data["ward"] = ward
 
-        # Initialize patient data
-        patient_data = state["patient_data"].copy()
-        patient_data["ward"] = ward
+            # Generate initial greeting response
+            initial_response = AIMessage(content="Hello! I'm the hospital AI receptionist. May I please have your full name?")
 
-        # Generate initial greeting response
-        initial_response = AIMessage(content="Hello! I'm the hospital AI receptionist. May I please have your full name?")
-
-        return {
-            **state,
-            "patient_data": patient_data,
-            "messages": messages + [initial_response],
-            "current_node": next_node
-        }
+            return {
+                **state,
+                "patient_data": patient_data,
+                "messages": messages + [initial_response],
+                "current_node": next_node,
+                "router_greeting_shown": True
+            }
 
     return state
 
@@ -138,99 +143,86 @@ def handle_ward_logic(state: ConversationState, ward_type: str) -> ConversationS
     """Common logic for all ward nodes - collect patient information in name -> age -> symptoms order"""
     patient_data = state["patient_data"].copy()
     messages = state["messages"]
+    
+    # Count how many user messages we have to know which response we're processing
+    user_message_count = len([msg for msg in messages if not isinstance(msg, AIMessage)])
 
-    # Count AI messages to know what step we're in
-    ai_message_count = len([msg for msg in messages if isinstance(msg, AIMessage)])
-
-    # Process user responses based on conversation step
+    # Get the last user message
     last_user_message = None
     for msg in reversed(messages):
         if hasattr(msg, 'content') and not isinstance(msg, AIMessage):
             last_user_message = msg.content
             break
 
-    # Track the effective conversation step (accounts for validation failures)
-    effective_step = ai_message_count
+    # Determine what information we have and what we need next
+    has_name = patient_data.get("patient_name") is not None and patient_data.get("patient_name").strip() != ""
+    has_valid_age = patient_data.get("patient_age") is not None
+    has_symptoms = patient_data.get("patient_query") is not None and patient_data.get("patient_query").strip() != ""
 
-    # Adjust effective step if we have missing required information
-    if not patient_data.get("patient_name") and ai_message_count >= 1:
-        effective_step = 1  # Still waiting for name
-    elif not patient_data.get("patient_age") and ai_message_count >= 2:
-        effective_step = 2  # Still waiting for valid age
-    elif not patient_data.get("patient_query") and ai_message_count >= 3:
-        effective_step = 3  # Still waiting for symptoms
-
-    if ai_message_count > 0 and last_user_message:
-        # Process user response based on effective conversation step
-        if effective_step == 1:
-            # User provided name
+    # Only process the user message if the router greeting has been shown
+    # This prevents processing the first user message twice
+    if state.get("router_greeting_shown", False) and last_user_message:
+        # Process the last user message to populate missing fields (in order: name -> age -> symptoms)
+        if user_message_count == 1 and not has_name:
+            # Don't process yet - this is the first message and router greeting was just shown
+            pass
+        elif not has_name:
+            # First response should be the name (second user message, first AI response was greeting)
             patient_data["patient_name"] = last_user_message.strip()
-        elif effective_step == 2:
-            # User provided age - validate it
+            has_name = True
+        elif has_name and not has_valid_age:
+            # Second response should be the age
             age_input = last_user_message.strip()
             if age_input.isdigit():
                 age = int(age_input)
                 # Reasonable age validation (1-120 years)
                 if 1 <= age <= 120:
                     patient_data["patient_age"] = age
-                # No print statements needed in production
-            # Invalid input is handled by not storing it
-        elif effective_step == 3:
-            # User provided symptoms
+                    has_valid_age = True
+        elif has_name and has_valid_age and not has_symptoms:
+            # Third response should be the symptoms
             patient_data["patient_query"] = last_user_message.strip()
+            has_symptoms = True
 
-    # Determine next question based on effective conversation step
-    if effective_step == 0:
-        # First interaction - ask for name
+    # Determine the next question based on what we're missing
+    if not has_name:
+        # First step - ask for name
         question = "Hello! I'm the hospital AI receptionist. May I please have your full name?"
-    elif effective_step == 1:
-        # After getting name, ask for age
-        question = "Thank you. Could you please tell me your age?"
-    elif effective_step == 2:
-        # Check if we have valid age, if not, ask again
-        if not patient_data.get("patient_age"):
-            question = "I'm sorry, please enter a valid age using only numbers (between 1-120)."
+    elif not has_valid_age:
+        # Second step - ask for age
+        question = f"Thank you, {patient_data.get('patient_name')}. Could you please tell me your age? (Please enter a number between 1-120)"
+    elif not has_symptoms:
+        # Third step - ask for symptoms
+        question = "Thank you. Could you please describe your symptoms so I can help route you to the appropriate department?"
+    else:
+        # All information collected - classify and complete
+        symptoms = patient_data["patient_query"]
+        ward = classify_symptom_with_llm(symptoms)
+
+        # Map classification to ward enum
+        if ward == "Emergency":
+            final_ward = Ward.EMERGENCY
+            ward_display = "Emergency Department"
+        elif ward == "Mental_health":
+            final_ward = Ward.MENTAL_HEALTH
+            ward_display = "Mental Health Services"
         else:
-            # Age is valid, ask for symptoms
-            question = "Thank you. Could you please describe your symptoms so I can help route you to the appropriate department?"
-    elif effective_step == 3:
-        # User provided symptoms, now classify and complete
-        # All information collected, classify symptoms and route to ward
-        if patient_data.get("patient_name") and patient_data.get("patient_age") and patient_data.get("patient_query"):
-            # Classify symptoms and determine ward
-            symptoms = patient_data["patient_query"]
-            ward = classify_symptom_with_llm(symptoms)
+            final_ward = Ward.GENERAL
+            ward_display = "General Ward"
 
-            # Map classification to ward enum
-            if ward == "Emergency":
-                final_ward = Ward.EMERGENCY
-                ward_display = "Emergency Department"
-            elif ward == "Mental_health":
-                final_ward = Ward.MENTAL_HEALTH
-                ward_display = "Mental Health Services"
-            else:
-                final_ward = Ward.GENERAL
-                ward_display = "General Ward"
+        # Update patient data with final ward
+        patient_data["ward"] = final_ward
 
-            # Update patient data with final ward
-            patient_data["ward"] = final_ward
+        # Trigger webhook and complete
+        trigger_webhook(patient_data)
+        success_message = AIMessage(content=f"Thank you for providing your information, {patient_data.get('patient_name')}. Based on your symptoms, you'll be shifted to the {ward_display}. A healthcare professional will assist you shortly.")
 
-            # Trigger webhook and complete
-            trigger_webhook(patient_data)
-            success_message = AIMessage(content=f"Thank you for providing your information. Based on your symptoms, you'll be shifted to the {ward_display}. A healthcare professional will assist you shortly.")
-
-            return {
-                **state,
-                "patient_data": patient_data,
-                "messages": messages + [success_message],
-                "current_node": "complete"
-            }
-        else:
-            # Check what's missing and ask appropriately
-            if not patient_data.get("patient_age"):
-                question = "I'm sorry, please enter a valid age using only numbers (between 1-120)."
-            else:
-                question = "Could you please describe your symptoms?"
+        return {
+            **state,
+            "patient_data": patient_data,
+            "messages": messages + [success_message],
+            "current_node": "complete"
+        }
 
     ai_message = AIMessage(content=question)
     return {
