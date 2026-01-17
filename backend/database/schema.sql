@@ -209,7 +209,7 @@ CREATE INDEX idx_chat_session_id ON chat_sessions(session_id);
 CREATE OR REPLACE FUNCTION generate_patient_id()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.patient_id := 'PAT' || LPAD(CAST(EXTRACT(EPOCH FROM NOW()) AS VARCHAR)::INT % 100000 AS TEXT, 5, '0');
+    NEW.patient_id := 'PAT' || LPAD(CAST((EXTRACT(EPOCH FROM NOW())::INT % 100000) AS VARCHAR), 5, '0');
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;

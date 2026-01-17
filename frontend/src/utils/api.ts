@@ -5,10 +5,13 @@
 export function getApiUrl(endpoint: string): string {
   const rawApiEnv = import.meta.env.VITE_API_URL || 'http://localhost:8000'
   const apiBase = rawApiEnv.replace(/\/$/, '') // drop trailing slash
-  const apiRoot = apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`
   
-  // Clean endpoint path
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint
+  // Remove /api from endpoint if it already exists there
+  let cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint
+  cleanEndpoint = cleanEndpoint.startsWith('api/') ? cleanEndpoint.slice(4) : cleanEndpoint
+  
+  // Build final URL - only add /api if the base doesn't already have it
+  const apiRoot = apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`
   
   return `${apiRoot}/${cleanEndpoint}`
 }
