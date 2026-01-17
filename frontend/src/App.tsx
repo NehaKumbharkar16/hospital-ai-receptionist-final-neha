@@ -36,7 +36,7 @@ function App() {
 
       {/* Main Content */}
       <main className="main-content">
-        {currentPage === 'home' && <Home onNavigate={setCurrentPage} />}
+        {currentPage === 'home' && <Home onNavigate={(page) => setCurrentPage(page as Page)} />}
 
         {currentPage === 'chat' && (
           <div className="chat-container">
@@ -51,9 +51,9 @@ function App() {
 
         {currentPage === 'registration' && <PatientRegistration />}
 
-        {currentPage === 'appointments' && <AppointmentBooking onNavigate={setCurrentPage} />}
+        {currentPage === 'appointments' && <AppointmentBooking onNavigate={(page) => setCurrentPage(page as Page)} />}
 
-        {currentPage === 'admin' && <AdminDashboard onNavigate={setCurrentPage} />}
+        {currentPage === 'admin' && <AdminDashboard onNavigate={(page) => setCurrentPage(page as Page)} />}
       </main>
 
       {/* Footer */}

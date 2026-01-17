@@ -4,7 +4,7 @@ interface AppointmentBookingProps {
   onNavigate?: (page: string) => void
 }
 
-const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ onNavigate }) => {
+const AppointmentBooking: React.FC<AppointmentBookingProps> = () => {
   const [loading, setLoading] = useState(false)
   const [doctors, setDoctors] = useState([])
   const [appointments, setAppointments] = useState([])

@@ -335,7 +335,7 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onNavigate })
                     name="searchType"
                     value="email"
                     checked={lookupData.searchType === 'email'}
-                    onChange={(e) => setLookupData(prev => ({ ...prev, searchType: 'email' }))}
+                    onChange={() => setLookupData(prev => ({ ...prev, searchType: 'email' }))}
                   />
                   <span>📧 Email</span>
                 </label>
@@ -345,7 +345,7 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onNavigate })
                     name="searchType"
                     value="phone"
                     checked={lookupData.searchType === 'phone'}
-                    onChange={(e) => setLookupData(prev => ({ ...prev, searchType: 'phone' }))}
+                    onChange={() => setLookupData(prev => ({ ...prev, searchType: 'phone' }))}
                   />
                   <span>📱 Phone</span>
                 </label>
@@ -355,7 +355,7 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onNavigate })
                     name="searchType"
                     value="patientId"
                     checked={lookupData.searchType === 'patientId'}
-                    onChange={(e) => setLookupData(prev => ({ ...prev, searchType: 'patientId' }))}
+                    onChange={() => setLookupData(prev => ({ ...prev, searchType: 'patientId' }))}
                   />
                   <span>🆔 Patient ID</span>
                 </label>

@@ -25,7 +25,6 @@ const Chat = () => {
   ])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [responseTime, setResponseTime] = useState<number | null>(null)
   const [sessionId] = useState(() => Math.random().toString(36).substring(7))
   const [lastMessageTime, setLastMessageTime] = useState<number>(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -59,14 +58,12 @@ const Chat = () => {
     setMessages(prev => [...prev, userMessage])
     setInputMessage('')
     setIsLoading(true)
-    setResponseTime(null)
 
     // Cancel previous request if it's still pending
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
     }
 
-    const startTime = Date.now()
     abortControllerRef.current = new AbortController()
 
     try {
@@ -107,9 +104,6 @@ const Chat = () => {
       } catch (e) {
         // response was not JSON, keep raw text for debugging
       }
-
-      const elapsedTime = Date.now() - startTime
-      setResponseTime(elapsedTime)
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
