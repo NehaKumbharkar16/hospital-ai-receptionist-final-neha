@@ -167,9 +167,9 @@ class Patient(PatientBase):
     id: str
     patient_id: str
     has_emergency_flag: bool
-    emergency_description: Optional[str]
+    emergency_description: Optional[str] = None
     registration_date: datetime
-    last_visit_date: Optional[datetime]
+    last_visit_date: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
