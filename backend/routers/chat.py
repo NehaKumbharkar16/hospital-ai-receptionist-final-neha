@@ -66,16 +66,19 @@ async def chat_endpoint(chat_message: ChatMessage) -> Dict[str, str]:
         print(f"[DEBUG] Patient data from result: {patient_data}")
         print(f"[DEBUG] Patient name: {patient_data.get('patient_name')}")
         print(f"[DEBUG] Patient age: {patient_data.get('patient_age')}")
+        print(f"[DEBUG] Patient query/symptoms: {patient_data.get('patient_query')}")
         print(f"[DEBUG] Ward: {patient_data.get('ward')}")
         
         # Save patient consultation data if ward has been determined by AI
         ward_value = patient_data.get("ward")
         patient_name = patient_data.get("patient_name")
         patient_age = patient_data.get("patient_age")
-        symptoms = patient_data.get("patient_query")
+        symptoms = patient_data.get("patient_query")  # This is the symptoms field
+        
+        print(f"[DEBUG] Extracted symptoms: {symptoms}")
         
         if ward_value:
-            print(f"[INFO] Saving consultation for {patient_name} (age: {patient_age}) - Ward: {ward_value}")
+            print(f"[INFO] Saving consultation for {patient_name} (age: {patient_age}, symptoms: {symptoms}) - Ward: {ward_value}")
             asyncio.create_task(save_patient_consultation(
                 session_id=session_id,
                 patient_name=patient_name,
@@ -165,6 +168,8 @@ def _save_consultation_blocking(session_id: str, patient_name: str, patient_age:
             print(f"[ERROR] Supabase admin client not available")
             return
         
+        print(f"[DEBUG-SAVE] Received params - name: {patient_name}, age: {patient_age}, symptoms: {symptoms}, ward: {suggested_ward}")
+        
         # Convert ward enum to string if needed
         ward_value = suggested_ward
         if hasattr(ward_value, 'value'):
@@ -193,10 +198,13 @@ def _save_consultation_blocking(session_id: str, patient_name: str, patient_age:
                 pass
         if symptoms and str(symptoms).strip() != "None":
             consultation_data["symptoms"] = str(symptoms).strip()
+            print(f"[DEBUG-SAVE] Adding symptoms to data: {consultation_data['symptoms']}")
+        else:
+            print(f"[DEBUG-SAVE] Symptoms is None or empty: {symptoms}")
         if ward_value and ward_value != "None":
             consultation_data["suggested_ward"] = ward_value
         
-        print(f"[DEBUG] Final consultation data to save: {consultation_data}")
+        print(f"[DEBUG-SAVE] Final consultation data to save: {consultation_data}")
         
         # Try to update existing consultation, or insert new one
         try:
@@ -208,13 +216,13 @@ def _save_consultation_blocking(session_id: str, patient_name: str, patient_age:
                 result = supabase_admin.table("chat_sessions").update(consultation_data).eq("session_id", session_id).execute()
                 print(f"[SUCCESS] Updated consultation for session {session_id}")
                 if result.data:
-                    print(f"[SUCCESS] Updated with: patient_name={result.data[0].get('patient_name')}, age={result.data[0].get('patient_age')}, ward={result.data[0].get('suggested_ward')}")
+                    print(f"[SUCCESS] Updated with: patient_name={result.data[0].get('patient_name')}, age={result.data[0].get('patient_age')}, symptoms={result.data[0].get('symptoms')}, ward={result.data[0].get('suggested_ward')}")
             else:
                 # Insert new consultation
                 result = supabase_admin.table("chat_sessions").insert(consultation_data).execute()
                 print(f"[SUCCESS] Saved new consultation for session {session_id}")
                 if result.data:
-                    print(f"[SUCCESS] Inserted with: patient_name={result.data[0].get('patient_name')}, age={result.data[0].get('patient_age')}, ward={result.data[0].get('suggested_ward')}")
+                    print(f"[SUCCESS] Inserted with: patient_name={result.data[0].get('patient_name')}, age={result.data[0].get('patient_age')}, symptoms={result.data[0].get('symptoms')}, ward={result.data[0].get('suggested_ward')}")
         except Exception as db_error:
             print(f"[ERROR] Database operation failed: {db_error}")
             import traceback
