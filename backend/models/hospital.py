@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import Optional, List
 from enum import Enum
 from datetime import datetime, date, time
@@ -71,7 +71,7 @@ class Specialization(SpecializationBase):
 # ============ Doctor Models ============
 class DoctorBase(BaseModel):
     name: str
-    email: EmailStr
+    email: str
     phone: str
     specialization_id: str
     department_id: str
@@ -133,7 +133,7 @@ class DoctorSlot(DoctorSlotBase):
 class PatientBase(BaseModel):
     first_name: str
     last_name: str
-    email: EmailStr
+    email: str
     phone: str
     age: int
     gender: Optional[Gender] = None
