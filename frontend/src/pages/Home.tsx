@@ -7,7 +7,6 @@ interface HomeProps {
 
 const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   const [stats, setStats] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadDashboardStats()
@@ -22,8 +21,6 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
       }
     } catch (error) {
       console.error('Error loading dashboard stats:', error)
-    } finally {
-      setLoading(false)
     }
   }
 
