@@ -8,10 +8,10 @@ interface AppointmentBookingProps {
 
 const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ selectedPatient }) => {
   const [loading, setLoading] = useState(false)
-  const [doctors, setDoctors] = useState([])
-  const [appointments, setAppointments] = useState([])
-  const [allScheduledAppointments, setAllScheduledAppointments] = useState([])
-  const [availableDoctors, setAvailableDoctors] = useState([])
+  const [doctors, setDoctors] = useState<any[]>([])
+  const [appointments, setAppointments] = useState<any[]>([])
+  const [allScheduledAppointments, setAllScheduledAppointments] = useState<any[]>([])
+  const [availableDoctors, setAvailableDoctors] = useState<any[]>([])
   const [showScheduledAppointments, setShowScheduledAppointments] = useState(false)
   const [showAvailableDoctors, setShowAvailableDoctors] = useState(false)
 

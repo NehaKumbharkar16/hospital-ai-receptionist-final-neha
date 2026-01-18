@@ -6,7 +6,7 @@ interface PatientRegistrationProps {
   onPatientSelected?: (patient: any) => void
 }
 
-const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onNavigate, onPatientSelected }) => {
+const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onNavigate: _onNavigate, onPatientSelected }) => {
   const [activeTab, setActiveTab] = useState<'register' | 'lookup'>('register')
   const [loading, setLoading] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
