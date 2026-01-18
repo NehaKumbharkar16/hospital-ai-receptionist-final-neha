@@ -73,19 +73,35 @@ async def get_dashboard_overview():
         
         today = date.today()
         
-        # Get today's statistics
-        stats_result = supabase.table("hospital_statistics").select("*").eq("statistic_date", today.isoformat()).execute()
-        stats = stats_result.data[0] if stats_result.data else {}
+        try:
+            # Get today's statistics
+            stats_result = supabase.table("hospital_statistics").select("*").eq("statistic_date", today.isoformat()).execute()
+            stats = stats_result.data[0] if stats_result.data else {}
+        except Exception as e:
+            print(f"[WARNING] Failed to fetch hospital_statistics: {e}")
+            stats = {}
         
-        # Get pending appointments
-        pending_appointments = supabase.table("appointments").select("*").eq("status", "scheduled").execute()
+        try:
+            # Get pending appointments
+            pending_appointments = supabase.table("appointments").select("*").eq("status", "scheduled").execute()
+        except Exception as e:
+            print(f"[WARNING] Failed to fetch appointments: {e}")
+            pending_appointments = type('obj', (object,), {'data': []})()
         
-        # Get recent patients
-        recent_patients = supabase.table("patients").select("*").order("registration_date", desc=True).limit(10).execute()
+        try:
+            # Get recent patients
+            recent_patients = supabase.table("patients").select("*").order("registration_date", desc=True).limit(10).execute()
+        except Exception as e:
+            print(f"[WARNING] Failed to fetch patients: {e}")
+            recent_patients = type('obj', (object,), {'data': []})()
         
-        # Get doctors on duty
-        doctors_result = supabase.table("doctors").select("*").eq("is_on_leave", False).execute()
-        available_doctors_count = len(doctors_result.data) if doctors_result.data else 0
+        try:
+            # Get doctors on duty
+            doctors_result = supabase.table("doctors").select("*").eq("is_on_leave", False).execute()
+            available_doctors_count = len(doctors_result.data) if doctors_result.data else 0
+        except Exception as e:
+            print(f"[WARNING] Failed to fetch doctors: {e}")
+            available_doctors_count = 0
         
         return {
             "statistics": stats,
@@ -95,6 +111,9 @@ async def get_dashboard_overview():
         }
         
     except Exception as e:
+        print(f"[ERROR] Dashboard overview error: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/emergency-cases")
@@ -112,6 +131,45 @@ async def get_emergency_cases(days: int = Query(1)):
         return {
             "total": len(result.data) if result.data else 0,
             "cases": result.data if result.data else []
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/patients/today")
+async def get_patients_today():
+    """Get all patients registered today"""
+    try:
+        supabase = get_supabase_admin()
+        if not supabase:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        
+        today = date.today()
+        today_str = today.isoformat()
+        
+        result = supabase.table("patients").select("*").gte("registration_date", f"{today_str}T00:00:00").lte("registration_date", f"{today_str}T23:59:59").order("registration_date", desc=True).execute()
+        
+        return {
+            "total": len(result.data) if result.data else 0,
+            "patients": result.data if result.data else []
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/patients/all")
+async def get_all_patients():
+    """Get all patients"""
+    try:
+        supabase = get_supabase_admin()
+        if not supabase:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        
+        result = supabase.table("patients").select("*").order("registration_date", desc=True).execute()
+        
+        return {
+            "total": len(result.data) if result.data else 0,
+            "patients": result.data if result.data else []
         }
         
     except Exception as e:

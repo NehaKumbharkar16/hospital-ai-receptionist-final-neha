@@ -8,6 +8,10 @@ interface AdminDashboardProps {
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
   const [stats, setStats] = useState<any>(null)
   const [emergencyCases, setEmergencyCases] = useState<any[]>([])
+  const [patientsToday, setPatientsToday] = useState<any[]>([])
+  const [allPatients, setAllPatients] = useState<any[]>([])
+  const [pendingAppointments, setPendingAppointments] = useState<any[]>([])
+  const [availableDoctorsList, setAvailableDoctorsList] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [successMessage, setSuccessMessage] = useState('')
   const [activeTab, setActiveTab] = useState('overview')
@@ -36,6 +40,91 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
       setTimeout(() => setSuccessMessage(''), 4000)
     } catch (error) {
       console.error('Error loading dashboard:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadPatientToday = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch(getApiUrl('/api/admin/patients/today'))
+      if (response.ok) {
+        const data = await response.json()
+        setPatientsToday(data.patients || [])
+        setActiveTab('todays-patients')
+        setSuccessMessage(`✅ Loaded ${data.total} patients from today`)
+        setTimeout(() => setSuccessMessage(''), 4000)
+      } else {
+        alert('Failed to load patients from today')
+      }
+    } catch (error) {
+      console.error('Error loading patients today:', error)
+      alert('Error loading patients from today')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadAllPatients = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch(getApiUrl('/api/admin/patients/all'))
+      if (response.ok) {
+        const data = await response.json()
+        setAllPatients(data.patients || [])
+        setActiveTab('all-patients')
+        setSuccessMessage(`✅ Loaded ${data.total} total patients`)
+        setTimeout(() => setSuccessMessage(''), 4000)
+      } else {
+        alert('Failed to load all patients')
+      }
+    } catch (error) {
+      console.error('Error loading all patients:', error)
+      alert('Error loading all patients')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadPendingAppointments = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch(getApiUrl('/api/appointments?status=scheduled'))
+      if (response.ok) {
+        const data = await response.json()
+        setPendingAppointments(data)
+        setActiveTab('pending-appointments')
+        setSuccessMessage(`✅ Loaded ${data.length} pending appointments`)
+        setTimeout(() => setSuccessMessage(''), 4000)
+      } else {
+        alert('Failed to load pending appointments')
+      }
+    } catch (error) {
+      console.error('Error loading pending appointments:', error)
+      alert('Error loading pending appointments')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadAvailableDoctors = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch(getApiUrl('/api/doctors'))
+      if (response.ok) {
+        const data = await response.json()
+        const availableDocs = data.filter((doc: any) => !doc.is_on_leave)
+        setAvailableDoctorsList(availableDocs)
+        setActiveTab('available-doctors')
+        setSuccessMessage(`✅ Loaded ${availableDocs.length} available doctors`)
+        setTimeout(() => setSuccessMessage(''), 4000)
+      } else {
+        alert('Failed to load available doctors')
+      }
+    } catch (error) {
+      console.error('Error loading available doctors:', error)
+      alert('Error loading available doctors')
     } finally {
       setLoading(false)
     }
@@ -114,6 +203,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
         >
           👥 Recent Patients
         </button>
+        <button 
+          className={`tab-button ${activeTab === 'todays-patients' ? 'active' : ''}`}
+          onClick={() => loadPatientToday()}
+        >
+          📆 Today's Patients
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'all-patients' ? 'active' : ''}`}
+          onClick={() => loadAllPatients()}
+        >
+          📋 All Patients
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'pending-appointments' ? 'active' : ''}`}
+          onClick={() => loadPendingAppointments()}
+        >
+          📅 Pending Appointments
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'available-doctors' ? 'active' : ''}`}
+          onClick={() => loadAvailableDoctors()}
+        >
+          👨‍⚕️ Available Doctors
+        </button>
       </div>
 
       {stats && (
@@ -123,19 +236,43 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
             <div className="tab-content">
               {/* Key Metrics */}
               <div className="metrics-grid">
-                <div className="metric-card">
+                <div 
+                  className="metric-card"
+                  onClick={() => loadPatientToday()}
+                  style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-5px)'
+                    e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)'
+                  }}
+                >
                   <div className="metric-icon">👥</div>
                   <div className="metric-content">
                     <div className="metric-value">{stats.statistics?.total_patients_today || 0}</div>
-                    <div className="metric-label">Patients Today</div>
+                    <div className="metric-label">Patients Today (Click to view)</div>
                   </div>
                 </div>
 
-                <div className="metric-card">
+                <div 
+                  className="metric-card"
+                  onClick={() => loadPendingAppointments()}
+                  style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-5px)'
+                    e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)'
+                  }}
+                >
                   <div className="metric-icon">📅</div>
                   <div className="metric-content">
                     <div className="metric-value">{stats.pending_appointments || 0}</div>
-                    <div className="metric-label">Pending Appointments</div>
+                    <div className="metric-label">Pending Appointments (Click to view)</div>
                   </div>
                 </div>
 
@@ -147,11 +284,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
                   </div>
                 </div>
 
-                <div className="metric-card">
+                <div 
+                  className="metric-card"
+                  onClick={() => loadAvailableDoctors()}
+                  style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-5px)'
+                    e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)'
+                  }}
+                >
                   <div className="metric-icon">👨‍⚕️</div>
                   <div className="metric-content">
                     <div className="metric-value">{stats.available_doctors || 0}</div>
-                    <div className="metric-label">Available Doctors</div>
+                    <div className="metric-label">Available Doctors (Click to view)</div>
                   </div>
                 </div>
               </div>
@@ -162,7 +311,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
                 <div className="action-buttons">
                   <button 
                     className="action-button view-patients"
-                    onClick={() => onNavigate?.('registration')}
+                    onClick={() => loadAllPatients()}
                   >
                     <span className="button-icon">👥</span>
                     <span>View All Patients</span>
@@ -245,6 +394,146 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
                 <div className="empty-state">
                   <p className="empty-icon">🔍</p>
                   <p className="empty-text">No recently registered patients</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Today's Patients Tab */}
+          {activeTab === 'todays-patients' && (
+            <div className="tab-content">
+              {patientsToday.length > 0 ? (
+                <div className="dashboard-section">
+                  <h2 className="section-header">📆 Patients Registered Today ({patientsToday.length})</h2>
+                  <div className="patients-list">
+                    {patientsToday.map((patient: any) => (
+                      <div key={patient.id} className="patient-card">
+                        <div className="patient-header">
+                          <div className="patient-avatar">{patient.first_name.charAt(0)}</div>
+                          <div className="patient-info">
+                            <p className="patient-name">{patient.first_name} {patient.last_name}</p>
+                            <p className="patient-id">ID: {patient.patient_id}</p>
+                          </div>
+                        </div>
+                        <div className="patient-details">
+                          <p><strong>📧 Email:</strong> {patient.email}</p>
+                          <p><strong>📞 Phone:</strong> {patient.phone}</p>
+                          <p><strong>🎂 Age:</strong> {patient.age}</p>
+                          <p><strong>⚕️ Blood Group:</strong> {patient.blood_group || 'N/A'}</p>
+                          <p className="patient-registered"><strong>⏰ Registered At:</strong> {new Date(patient.registration_date).toLocaleTimeString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <p className="empty-icon">📭</p>
+                  <p className="empty-text">No patients registered today</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* All Patients Tab */}
+          {activeTab === 'all-patients' && (
+            <div className="tab-content">
+              {allPatients.length > 0 ? (
+                <div className="dashboard-section">
+                  <h2 className="section-header">📋 All Patients ({allPatients.length})</h2>
+                  <div className="patients-list">
+                    {allPatients.map((patient: any) => (
+                      <div key={patient.id} className="patient-card">
+                        <div className="patient-header">
+                          <div className="patient-avatar">{patient.first_name.charAt(0)}</div>
+                          <div className="patient-info">
+                            <p className="patient-name">{patient.first_name} {patient.last_name}</p>
+                            <p className="patient-id">ID: {patient.patient_id}</p>
+                          </div>
+                        </div>
+                        <div className="patient-details">
+                          <p><strong>📧 Email:</strong> {patient.email}</p>
+                          <p><strong>📞 Phone:</strong> {patient.phone}</p>
+                          <p><strong>🎂 Age:</strong> {patient.age}</p>
+                          <p><strong>⚕️ Blood Group:</strong> {patient.blood_group || 'N/A'}</p>
+                          <p className="patient-registered"><strong>📅 Registered:</strong> {new Date(patient.registration_date).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <p className="empty-icon">🔍</p>
+                  <p className="empty-text">No patients found</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Pending Appointments Tab */}
+          {activeTab === 'pending-appointments' && (
+            <div className="tab-content">
+              {pendingAppointments.length > 0 ? (
+                <div className="dashboard-section">
+                  <h2 className="section-header">📅 Pending Appointments ({pendingAppointments.length})</h2>
+                  <div className="appointments-list">
+                    {pendingAppointments.map((appointment: any) => (
+                      <div key={appointment.id} className="appointment-card">
+                        <div className="appointment-header">
+                          <span className="apt-number">APT #{appointment.appointment_number}</span>
+                          <span className={`status-badge status-${appointment.status}`}>
+                            {appointment.status?.toUpperCase() || 'SCHEDULED'}
+                          </span>
+                        </div>
+                        <div className="appointment-details">
+                          <p><strong>📅 Date & Time:</strong> {new Date(appointment.appointment_date).toLocaleString()}</p>
+                          <p><strong>📝 Reason:</strong> {appointment.reason_for_visit || 'N/A'}</p>
+                          <p><strong>⚠️ Priority:</strong> {appointment.priority?.toUpperCase() || 'NORMAL'}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <p className="empty-icon">✅</p>
+                  <p className="empty-text">No pending appointments</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Available Doctors Tab */}
+          {activeTab === 'available-doctors' && (
+            <div className="tab-content">
+              {availableDoctorsList.length > 0 ? (
+                <div className="dashboard-section">
+                  <h2 className="section-header">👨‍⚕️ Available Doctors ({availableDoctorsList.length})</h2>
+                  <div className="doctors-list">
+                    {availableDoctorsList.map((doctor: any) => (
+                      <div key={doctor.id} className="doctor-card">
+                        <div className="doctor-header">
+                          <div className="doctor-avatar">{doctor.name.charAt(0)}</div>
+                          <div className="doctor-info">
+                            <p className="doctor-name">Dr. {doctor.name}</p>
+                            <p className="doctor-qualification">{doctor.qualification || 'MD'}</p>
+                          </div>
+                        </div>
+                        <div className="doctor-details">
+                          <p><strong>📧 Email:</strong> {doctor.email}</p>
+                          <p><strong>📞 Phone:</strong> {doctor.phone}</p>
+                          <p><strong>⏱️ Experience:</strong> {doctor.experience_years || 0} years</p>
+                          <p><strong>💰 Consultation Fee:</strong> ₹{doctor.consultation_fee || 'N/A'}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <p className="empty-icon">🔍</p>
+                  <p className="empty-text">No available doctors at the moment</p>
                 </div>
               )}
             </div>
@@ -751,6 +1040,120 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
           .section-header {
             font-size: 1.2rem;
           }
+        }
+
+        /* Appointment and Doctor Cards */
+        .appointments-list,
+        .doctors-list {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 20px;
+          margin-top: 20px;
+        }
+
+        .appointment-card,
+        .doctor-card {
+          background: linear-gradient(135deg, #f5f7fa 0%, #f0f3f7 100%);
+          border-radius: 10px;
+          padding: 20px;
+          border-left: 5px solid #667eea;
+          transition: all 0.3s ease;
+        }
+
+        .appointment-card:hover,
+        .doctor-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 8px 25px rgba(102, 126, 234, 0.2);
+          border-left-color: #764ba2;
+        }
+
+        .appointment-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 15px;
+          padding-bottom: 10px;
+          border-bottom: 1px solid #ddd;
+        }
+
+        .apt-number {
+          font-weight: 700;
+          color: #667eea;
+          font-size: 1.05rem;
+        }
+
+        .appointment-details,
+        .doctor-details {
+          font-size: 0.9rem;
+          color: #555;
+        }
+
+        .appointment-details p,
+        .doctor-details p {
+          margin: 8px 0;
+          line-height: 1.4;
+        }
+
+        .doctor-header {
+          display: flex;
+          align-items: center;
+          gap: 15px;
+          margin-bottom: 15px;
+          padding-bottom: 15px;
+          border-bottom: 1px solid #ddd;
+        }
+
+        .doctor-avatar {
+          width: 45px;
+          height: 45px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 700;
+          font-size: 1.2rem;
+        }
+
+        .doctor-info {
+          flex: 1;
+        }
+
+        .doctor-name {
+          margin: 0;
+          font-weight: 700;
+          font-size: 1.05rem;
+          color: #333;
+        }
+
+        .doctor-qualification {
+          margin: 4px 0 0 0;
+          font-size: 0.85rem;
+          color: #999;
+        }
+
+        .status-badge {
+          padding: 6px 14px;
+          border-radius: 20px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          text-transform: uppercase;
+        }
+
+        .status-badge.status-scheduled {
+          background: #e3f2fd;
+          color: #1976d2;
+        }
+
+        .status-badge.status-completed {
+          background: #c8e6c9;
+          color: #388e3c;
+        }
+
+        .status-badge.status-cancelled {
+          background: #ffcdd2;
+          color: #d32f2f;
         }
       `}</style>
     </div>

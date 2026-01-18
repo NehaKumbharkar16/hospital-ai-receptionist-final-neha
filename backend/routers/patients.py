@@ -88,7 +88,7 @@ async def register_patient(patient: PatientCreate):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/lookup", response_model=List[Patient])
-async def lookup_patient(lookup: PatientLookup):
+async def lookup_patient(email: Optional[str] = Query(None), phone: Optional[str] = Query(None), patient_id: Optional[str] = Query(None)):
     """Look up existing patient by email, phone, or patient ID"""
     try:
         supabase = get_fresh_admin_client()
@@ -97,23 +97,50 @@ async def lookup_patient(lookup: PatientLookup):
         
         query = supabase.table("patients").select("*")
         
-        if lookup.email:
-            query = query.eq("email", lookup.email)
-        elif lookup.phone:
-            query = query.eq("phone", lookup.phone)
-        elif lookup.patient_id:
-            query = query.eq("patient_id", lookup.patient_id)
+        if email:
+            query = query.eq("email", email)
+        elif phone:
+            query = query.eq("phone", phone)
+        elif patient_id:
+            query = query.eq("patient_id", patient_id)
         else:
             raise HTTPException(status_code=400, detail="Provide email, phone, or patient_id for lookup")
         
         result = query.execute()
+        print(f"DEBUG lookup_patient: email={email}, phone={phone}, patient_id={patient_id}, result={result.data}")
         return result.data if result.data else []
         
     except HTTPException:
         raise
     except Exception as e:
         print(f"ERROR in lookup_patient: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/debug/all-patients")
+async def debug_all_patients():
+    """Debug endpoint to see all patients in database"""
+    try:
+        supabase = get_fresh_admin_client()
+        if not supabase:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        
+        result = supabase.table("patients").select("*").execute()
+        print(f"DEBUG all_patients: total={len(result.data)}, patients={result.data}")
+        return {
+            "total": len(result.data),
+            "patients": result.data
+        }
+    except Exception as e:
+        print(f"ERROR in debug_all_patients: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "total": 0,
+            "patients": [],
+            "error": str(e)
+        }
 
 @router.get("/{patient_id}", response_model=Patient)
 async def get_patient(patient_id: str):

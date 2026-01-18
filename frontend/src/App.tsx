@@ -8,9 +8,24 @@ import './App.css'
 
 type Page = 'home' | 'chat' | 'registration' | 'appointments' | 'admin'
 
+interface Patient {
+  id: string
+  patient_id: string
+  first_name: string
+  last_name: string
+  email: string
+  phone: string
+  age: number
+  gender?: string
+  blood_group?: string
+  address?: string
+  [key: string]: any
+}
+
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home')
   const [chatKey, setChatKey] = useState(0)
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
 
   const handleNewUser = () => {
     setChatKey(prev => prev + 1)
@@ -49,9 +64,17 @@ function App() {
           </div>
         )}
 
-        {currentPage === 'registration' && <PatientRegistration />}
+        {currentPage === 'registration' && (
+          <PatientRegistration 
+            onNavigate={(page) => setCurrentPage(page as Page)}
+            onPatientSelected={(patient) => {
+              setSelectedPatient(patient)
+              setCurrentPage('appointments')
+            }}
+          />
+        )}
 
-        {currentPage === 'appointments' && <AppointmentBooking onNavigate={(page) => setCurrentPage(page as Page)} />}
+        {currentPage === 'appointments' && <AppointmentBooking onNavigate={(page) => setCurrentPage(page as Page)} selectedPatient={selectedPatient} />}
 
         {currentPage === 'admin' && <AdminDashboard onNavigate={(page) => setCurrentPage(page as Page)} />}
       </main>

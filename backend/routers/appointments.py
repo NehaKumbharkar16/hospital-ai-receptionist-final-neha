@@ -106,6 +106,24 @@ async def get_patient_appointments(patient_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@appointments_router.get("/", response_model=List[Appointment])
+async def get_all_appointments(status: Optional[str] = None):
+    """Get all appointments, optionally filtered by status (scheduled, confirmed, completed, cancelled, etc.)"""
+    try:
+        supabase = get_supabase_admin()
+        if not supabase:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        
+        if status:
+            result = supabase.table("appointments").select("*").eq("status", status).order("appointment_date", desc=True).execute()
+        else:
+            result = supabase.table("appointments").select("*").order("appointment_date", desc=True).execute()
+        
+        return result.data if result.data else []
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @appointments_router.delete("/{appointment_id}")
 async def cancel_appointment(appointment_id: str):
     """Cancel an appointment"""

@@ -3,9 +3,10 @@ import { getApiUrl } from '../utils/api'
 
 interface PatientRegistrationProps {
   onNavigate?: (page: string) => void
+  onPatientSelected?: (patient: any) => void
 }
 
-const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onNavigate }) => {
+const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onNavigate, onPatientSelected }) => {
   const [activeTab, setActiveTab] = useState<'register' | 'lookup'>('register')
   const [loading, setLoading] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
@@ -424,7 +425,7 @@ const PatientRegistration: React.FC<PatientRegistrationProps> = ({ onNavigate })
                       </div>
                     )}
                   </div>
-                  <button className="action-btn" onClick={() => onNavigate?.('appointments')}>
+                  <button className="action-btn" onClick={() => onPatientSelected?.(foundPatient)}>
                     📅 Book Appointment for this Patient
                   </button>
                 </div>

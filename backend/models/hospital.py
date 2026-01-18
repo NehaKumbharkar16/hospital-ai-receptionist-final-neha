@@ -73,7 +73,7 @@ class DoctorBase(BaseModel):
     name: str
     email: str
     phone: str
-    specialization_id: str
+    specialization_id: Optional[str] = None
     department_id: str
     qualification: Optional[str] = None
     experience_years: Optional[int] = None
@@ -100,11 +100,11 @@ class DoctorUpdate(BaseModel):
 
 class Doctor(DoctorBase):
     id: str
-    is_on_leave: bool
-    leave_start_date: Optional[date]
-    leave_end_date: Optional[date]
-    created_at: datetime
-    updated_at: datetime
+    is_on_leave: Optional[bool] = None
+    leave_start_date: Optional[date] = None
+    leave_end_date: Optional[date] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -204,10 +204,10 @@ class Appointment(AppointmentBase):
     id: str
     appointment_number: str
     status: AppointmentStatus
-    room_number: Optional[str]
-    confirmation_sent: bool
-    confirmation_method: Optional[ConfirmationMethod]
-    notes: Optional[str]
+    room_number: Optional[str] = None
+    confirmation_sent: Optional[bool] = None
+    confirmation_method: Optional[ConfirmationMethod] = None
+    notes: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

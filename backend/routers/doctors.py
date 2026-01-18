@@ -109,9 +109,13 @@ async def list_doctors(department_id: Optional[str] = None, skip: int = Query(0)
             query = query.eq("department_id", department_id)
         
         result = query.range(skip, skip + limit - 1).execute()
+        print(f"DEBUG list_doctors: total_doctors={len(result.data) if result.data else 0}, doctors={result.data}")
         return result.data if result.data else []
         
     except Exception as e:
+        print(f"ERROR in list_doctors: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/{doctor_id}/slots", response_model=DoctorSlot)

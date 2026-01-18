@@ -154,6 +154,31 @@ def handle_ward_logic(state: ConversationState, ward_type: str) -> ConversationS
             last_user_message = msg.content
             break
 
+    # Check if the message is a polite greeting/closing (thank you, goodbye, etc.)
+    if last_user_message:
+        polite_keywords = ["thank you", "thanks", "thank", "goodbye", "bye", "take care", "nice day", "have a nice day", "see you", "appreciate it", "appreciate"]
+        last_message_lower = last_user_message.lower().strip()
+        
+        if any(keyword in last_message_lower for keyword in polite_keywords):
+            # Generate a nice closing response
+            patient_name = patient_data.get("patient_name")
+            closing_responses = [
+                f"You're welcome, {patient_name}! Thank you for visiting our hospital. Have a nice day and take care!",
+                f"Thank you for your trust, {patient_name}. Wishing you good health. Have a wonderful day!",
+                f"You're most welcome, {patient_name}! Take care and get well soon. Have a great day!",
+                f"Thank you for choosing our hospital, {patient_name}. Wishing you a speedy recovery. Have a nice day!",
+            ]
+            
+            closing_message = closing_responses[0] if patient_name else "You're welcome! Thank you for visiting our hospital. Have a nice day and take care!"
+            ai_message = AIMessage(content=closing_message)
+            
+            return {
+                **state,
+                "patient_data": patient_data,
+                "messages": messages + [ai_message],
+                "current_node": "complete"
+            }
+
     # Determine what information we have and what we need next
     has_name = patient_data.get("patient_name") is not None and patient_data.get("patient_name").strip() != ""
     has_valid_age = patient_data.get("patient_age") is not None
