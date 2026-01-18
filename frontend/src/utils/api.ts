@@ -3,8 +3,8 @@
  * Handles both local development and production deployments
  */
 export function getApiUrl(endpoint: string): string {
-  // Force local development URL for debugging
-  const apiBase = 'http://localhost:8000'
+  // Use environment variable, with fallback for development
+  const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8000'
   
   // Remove /api from endpoint if it already exists there
   let cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint
